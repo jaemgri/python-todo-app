@@ -1,0 +1,99 @@
+import tkinter as tk
+from tkinter import messagebox
+import os
+
+FILE_NAME = "tasks_gui_done.txt"
+tasks = []
+
+def load_tasks():
+    if os.path.exists(FILE_NAME):
+        with open(FILE_NAME, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    status, task = line.split(";", 1)
+                    done = status == "1"
+                    tasks.append({"task": task, "done": done})
+
+def save_tasks():
+    with open(FILE_NAME, "w") as f:
+        for t in tasks:
+            status = "1" if t["done"].get() else "0"
+            f.write(f"{status};{t['task']}\n")
+
+def add_task():
+    task = entry.get().strip()
+    if not task:
+        messagebox.showwarning("Warning", "Please enter a task.")
+        return
+    var = tk.BooleanVar(value=False)
+    tasks.append({"task": task, "done": var})
+    create_task_checkbox(task, var)
+    entry.delete(0, tk.END)
+    save_tasks()
+
+def delete_task():
+    to_delete = [i for i, t in enumerate(tasks) if t["done"].get()]
+    if not to_delete:
+        messagebox.showwarning("Warning", "Please check tasks to delete.")
+        return
+    # Remove from bottom to avoid index issues
+    for i in reversed(to_delete):
+        checkbuttons[i].destroy()
+        tasks.pop(i)
+        checkbuttons.pop(i)
+    save_tasks()
+
+def create_task_checkbox(task, var):
+    cb = tk.Checkbutton(frame_tasks, text=task, variable=var, onvalue=True, offvalue=False,
+                        command=save_tasks)
+    cb.pack(anchor="w")
+    checkbuttons.append(cb)
+
+# Main window
+root = tk.Tk()
+root.title("To-Do List with Checkboxes")
+
+# Input entry
+entry = tk.Entry(root, width=40)
+entry.pack(pady=10)
+
+# Buttons
+btn_frame = tk.Frame(root)
+btn_frame.pack()
+
+add_btn = tk.Button(btn_frame, text="Add Task", command=add_task)
+add_btn.grid(row=0, column=0, padx=5)
+
+del_btn = tk.Button(btn_frame, text="Delete Checked Tasks", command=delete_task)
+del_btn.grid(row=0, column=1, padx=5)
+
+# Frame for tasks with scrollbar
+frame_tasks = tk.Frame(root)
+frame_tasks.pack(pady=10)
+
+canvas = tk.Canvas(frame_tasks, width=400, height=200)
+scrollbar = tk.Scrollbar(frame_tasks, orient="vertical", command=canvas.yview)
+scrollable_frame = tk.Frame(canvas)
+
+scrollable_frame.bind(
+    "<Configure>",
+    lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+)
+
+canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+canvas.configure(yscrollcommand=scrollbar.set)
+
+canvas.pack(side="left", fill="both", expand=True)
+scrollbar.pack(side="right", fill="y")
+
+tasks = []
+checkbuttons = []
+
+# Load tasks from file and create checkbuttons
+load_tasks()
+for t in tasks:
+    t["done"] = tk.BooleanVar(value=t["done"])
+    create_task_checkbox(t["task"], t["done"])
+
+root.mainloop()
